@@ -4,6 +4,26 @@ Cross-device clipboard sync. Copy on one device, send it on purpose, paste on an
 
 This repo has two parts: a Vercel backend (API + Redis + Pusher) that stores clipboard entries (text and images), converts every image to JPEG server-side for universal viewability, and pushes real-time notifications when new content arrives; and [`desktop-app`](desktop-app), an Electron client (Windows and Mac, same codebase) with a small always-on-top floating button. The iOS side is [four Shortcuts](#ios-shortcuts) plus a hosted [history page](#success--history-page) for the browser-facing bits.
 
+## Quick start
+
+**1. Deploy your own backend** — click the button, follow the prompts (it creates the Redis and Blob storage for you, then asks for a few remaining values):
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge&env=CLIPBRIDGE_API_KEY,PUSHER_APP_ID,PUSHER_KEY,PUSHER_SECRET,PUSHER_CLUSTER&envDescription=Required%20environment%20variables%20for%20ClipBridge&envLink=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge%2Fblob%2Fmaster%2F.env.example&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D)
+
+Once it's deployed, open your new deployment's URL in a browser and click **"Setup code"** in the header — that copies one code to your clipboard containing everything every client below needs.
+
+**2. Install a client on each device:**
+
+| Platform | What to do |
+|---|---|
+| 🪟 Windows | [Download the installer](https://github.com/andreasserfilippi/clipbridge/releases/latest) (`.exe`), run it, paste your setup code when asked |
+| 🍎 Mac | [Download the installer](https://github.com/andreasserfilippi/clipbridge/releases/latest) (`.dmg`), run it, paste your setup code when asked |
+| 📱 iPhone | Download all four [iOS Shortcuts](#ios-shortcuts), run **ClipBridge Setup** once and paste your setup code when asked |
+
+That's it — copy on one device (tap the iOS Shortcut, or click the desktop floating button), and paste on another.
+
+Everything below this point is reference material — how it works internally, the API, security notes — useful if you're curious or want to contribute, not required reading to just use it.
+
 ## How it works
 
 Sending is always a deliberate action, never automatic — copying something doesn't upload it by itself, on any platform. You explicitly send it (tap a button on iOS, click the floating button on desktop), which is what keeps normal day-to-day copying from flooding every device with noise.
@@ -19,9 +39,7 @@ Every request (`POST` and both `GET`s) requires the `x-api-key` header. There is
 
 Each user runs their own instance with their own API key, KV store, and Pusher account — nothing is shared between deployments.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge&env=CLIPBRIDGE_API_KEY,PUSHER_APP_ID,PUSHER_KEY,PUSHER_SECRET,PUSHER_CLUSTER&envDescription=Required%20environment%20variables%20for%20ClipBridge&envLink=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge%2Fblob%2Fmaster%2F.env.example&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D)
-
-**Requires this repo to be public** — the Deploy Button can't clone a private repository into someone else's account.
+See [Quick start](#quick-start) above for the button itself. This section covers what it actually does and the manual alternative.
 
 The button will:
 - Fork/clone this repo into a new Vercel project
@@ -181,12 +199,7 @@ Four shortcuts, distributed as public iCloud links with no personal data baked i
 3. **[Copy Image](https://www.icloud.com/shortcuts/2cee60c9e9a34619b7ba52b17ec26efc)** — uploads the clipboard image straight to your Blob store, then sends the resulting URL as an entry (same flow as [Image storage](#image-storage)).
 4. **[Receive Clipboard](https://www.icloud.com/shortcuts/2975964423fb48e58d4357a9538c6485)** — fetches the latest entry and copies it to the clipboard, downloading the image itself first if it's an image entry.
 
-### Setup
-
-1. Download all four shortcuts above.
-2. Open your own deployment's URL and click **"Setup code"** in the header (same code used for the [desktop app](#desktop-app)) to copy a setup code to your clipboard.
-3. Run **ClipBridge Setup**, paste the code when asked, then name the device.
-4. Add Copy Text / Copy Image / Receive Clipboard to your Home Screen or as widgets — they work immediately, no further setup needed.
+See [Quick start](#quick-start) above for setup. Once **ClipBridge Setup** has run once, add Copy Text / Copy Image / Receive Clipboard to your Home Screen or as widgets — they work immediately, no further setup needed.
 
 Connecting push notifications (Pushcut) is a separate, optional step — see [Push notifications to iPhone](#push-notifications-to-iphone) above.
 
