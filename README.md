@@ -10,6 +10,11 @@ This repo has two parts: a Vercel backend (API + Redis + Pusher) that stores cli
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge&env=CLIPBRIDGE_API_KEY,PUSHER_APP_ID,PUSHER_KEY,PUSHER_SECRET,PUSHER_CLUSTER&envDescription=Required%20environment%20variables%20for%20ClipBridge&envLink=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge%2Fblob%2Fmaster%2F.env.example&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D)
 
+Redis and Blob storage get created for you automatically — just click through those. You'll then be asked to fill in two things by hand:
+
+- **`CLIPBRIDGE_API_KEY`** — this is your own password, not something to look up. Make up any random string (or run `openssl rand -hex 32` if you want one generated for you).
+- **`PUSHER_APP_ID`, `PUSHER_KEY`, `PUSHER_SECRET`, `PUSHER_CLUSTER`** — sign up free at [dashboard.pusher.com](https://dashboard.pusher.com/), create a **Channels** app, then copy these 4 values from its "App Keys" tab.
+
 Once it's deployed, open your new deployment's URL in a browser and click **"Setup code"** in the header — that copies one code to your clipboard containing everything every client below needs.
 
 **2. Install a client on each device:**
