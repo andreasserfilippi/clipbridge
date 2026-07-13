@@ -49,7 +49,7 @@ See [Quick start](#quick-start) above for the button itself. This section covers
 The button will:
 - Fork/clone this repo into a new Vercel project
 - Prompt you to add the **Upstash Redis** Marketplace integration, which auto-injects `KV_REST_API_URL` / `KV_REST_API_TOKEN` so you don't set those by hand
-- Prompt you to create a **public Blob** store, which auto-injects `BLOB_READ_WRITE_TOKEN`, used for image uploads
+- Prompt you to create a **public Blob** store, which generates a `BLOB_READ_WRITE_TOKEN` but does not automatically attach it to the project. After deploying, go to your project's **Storage** tab, open the Blob store, and use its **Integrations** (or **Connect Project**) option to link it, this is what actually injects `BLOB_READ_WRITE_TOKEN` as an environment variable. Without this step, image uploads will fail with a missing-token error.
 - Prompt you for the remaining environment variables listed below (Pushcut is optional and not prompted for; add `PUSHCUT_WEBHOOK_URL` manually later if you want iPhone push notifications)
 
 ### Manual setup

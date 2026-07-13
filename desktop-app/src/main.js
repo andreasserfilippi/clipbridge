@@ -199,6 +199,32 @@ function setExpanded(expanded) {
   floatingWindow.webContents.send('set-expanded', expanded);
 }
 
+// Clears the saved account config and sends the (hidden, background)
+// mainWindow back to onboarding — the only way back once a device has been
+// set up, short of manually finding and deleting the config file on disk.
+function resetConfiguration() {
+  dialog
+    .showMessageBox({
+      type: 'warning',
+      buttons: ['Reset', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      title: 'ClipBridge',
+      message: 'Reset ClipBridge configuration?',
+      detail:
+        "This clears the saved backend URL, API key, and device name from this computer. You'll need to paste a setup code again to reconnect.",
+    })
+    .then((result) => {
+      if (result.response !== 0) return;
+      store.clear();
+      wasConfiguredAtLaunch = false;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.reload();
+        mainWindow.show();
+      }
+    });
+}
+
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'icon.png'));
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
@@ -221,6 +247,11 @@ function createTray() {
         if (menuItem.checked) floatingWindow.show();
         else floatingWindow.hide();
       },
+    },
+    { type: 'separator' },
+    {
+      label: 'Reset Configuration…',
+      click: () => resetConfiguration(),
     },
     { type: 'separator' },
     {
