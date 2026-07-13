@@ -8,6 +8,11 @@ const store = new Store();
 contextBridge.exposeInMainWorld('native', {
   storeGet: (key) => store.get(key),
   storeSet: (key, value) => store.set(key, value),
+  // Full local reset (re-onboarding after e.g. switching to a new backend
+  // deployment) — wipes everything, not just the account fields, since a
+  // half-cleared store is worse than a fully fresh one.
+  storeClear: () => store.clear(),
+  restartApp: () => ipcRenderer.send('request-restart'),
 
   readClipboardFormats: () => clipboard.availableFormats(),
   readClipboardText: () => clipboard.readText(),
@@ -38,4 +43,9 @@ contextBridge.exposeInMainWorld('native', {
   onRequestHistoryRefresh: (callback) => ipcRenderer.on('request-history-refresh', () => callback()),
   onCopyEntryTrigger: (callback) => ipcRenderer.on('trigger-copy-entry', (event, entry) => callback(entry)),
   reportCopyResult: (result) => ipcRenderer.send('copy-result-from-main-window', result),
+
+  // Tray "Settings…" and the floating panel's settings button both reveal
+  // this window then send this so it jumps straight to the editable form
+  // instead of whatever it already had showing (history, once configured).
+  onOpenSettingsRequested: (callback) => ipcRenderer.on('open-settings-view', () => callback()),
 });

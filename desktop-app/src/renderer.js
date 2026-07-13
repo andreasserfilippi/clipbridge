@@ -7,6 +7,9 @@ const onboardingEl = document.getElementById('onboarding');
 const mainViewEl = document.getElementById('main-view');
 const historyEl = document.getElementById('history');
 const toastEl = document.getElementById('toast');
+const openSettingsBtn = document.getElementById('open-settings');
+const cancelSettingsBtn = document.getElementById('cancel-settings');
+const resetAllBtn = document.getElementById('reset-all');
 
 let config = null;
 // Prevents an overlapping send if the floating button is clicked again
@@ -58,8 +61,48 @@ function isConfigComplete(c) {
 function showOnboarding() {
   onboardingEl.style.display = 'block';
   mainViewEl.style.display = 'none';
+  openSettingsBtn.style.display = 'none';
   setStatus('Setup required', '');
 }
+
+// Reached via the header's gear icon, the tray's "Settings…", or the
+// floating panel's settings button (the latter two via onOpenSettingsRequested
+// below) — the only way back into this form once first-run setup is done,
+// since mainWindow otherwise stays hidden permanently after that.
+function openSettingsForEditing() {
+  if (!isConfigComplete(config)) return; // already on the onboarding form; nothing to do
+  document.getElementById('f-baseUrl').value = config.baseUrl || '';
+  document.getElementById('f-apiKey').value = config.apiKey || '';
+  document.getElementById('f-pusherKey').value = config.pusherKey || '';
+  document.getElementById('f-pusherCluster').value = config.pusherCluster || '';
+  document.getElementById('f-blobToken').value = config.blobToken || '';
+  document.getElementById('f-deviceName').value = config.deviceName || '';
+  document.getElementById('setup-error').textContent = '';
+  cancelSettingsBtn.style.display = 'block';
+  resetAllBtn.style.display = 'block';
+  showOnboarding();
+}
+
+openSettingsBtn.addEventListener('click', openSettingsForEditing);
+window.native.onOpenSettingsRequested(openSettingsForEditing);
+
+cancelSettingsBtn.addEventListener('click', () => {
+  document.getElementById('setup-error').textContent = '';
+  onboardingEl.style.display = 'none';
+  mainViewEl.style.display = 'flex';
+  openSettingsBtn.style.display = 'inline-block';
+  setStatus('Connected', 'connected');
+});
+
+resetAllBtn.addEventListener('click', () => {
+  const ok = confirm(
+    "This erases ClipBridge's local setup on this device (backend URL, keys, device name). " +
+    "You'll need to enter them again, or paste a setup code from another device. Continue?"
+  );
+  if (!ok) return;
+  window.native.storeClear();
+  window.native.restartApp();
+});
 
 document.getElementById('fill-from-code').addEventListener('click', () => {
   const errorEl = document.getElementById('setup-error');
@@ -98,8 +141,11 @@ document.getElementById('save-setup').addEventListener('click', () => {
   }
   errorEl.textContent = '';
   Object.keys(vals).forEach((k) => window.native.storeSet(k, vals[k]));
-  config = vals;
-  startApp();
+  // Restart rather than calling startApp() in place: this form is now also
+  // reachable after the app already booted once (editing existing setup),
+  // and startApp() wires up IPC listeners that are never torn down — a
+  // second call would double them up (double-sends, double-receives).
+  window.native.restartApp();
 });
 
 // ---------- History rendering ----------
@@ -274,6 +320,7 @@ function connectPusher() {
 function startApp() {
   onboardingEl.style.display = 'none';
   mainViewEl.style.display = 'flex';
+  openSettingsBtn.style.display = 'inline-block';
   setStatus('Connecting…', '');
 
   connectPusher();

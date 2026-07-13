@@ -4,6 +4,7 @@ const collapsedEl = document.getElementById('collapsed');
 const expandedEl = document.getElementById('expanded');
 const panelHeader = document.querySelector('.panel-header');
 const miniSend = document.getElementById('mini-send');
+const settingsBtn = document.getElementById('settings-btn');
 const collapseBtn = document.getElementById('collapse-btn');
 const panelHistory = document.getElementById('panel-history');
 const panelStatusDot = document.getElementById('panel-status-dot');
@@ -74,6 +75,7 @@ expandHandle.addEventListener('click', () => window.floatingNative.toggleExpand(
 
 collapseBtn.addEventListener('click', () => window.floatingNative.toggleExpand());
 miniSend.addEventListener('click', () => triggerSend(miniSend));
+settingsBtn.addEventListener('click', () => window.floatingNative.openSettings());
 
 function triggerSend(el) {
   if (el.classList.contains('syncing')) return;

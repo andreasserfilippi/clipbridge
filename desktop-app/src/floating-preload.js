@@ -13,4 +13,8 @@ contextBridge.exposeInMainWorld('floatingNative', {
   onHistoryUpdated: (callback) => ipcRenderer.on('history-updated', (event, entries) => callback(entries)),
   copyEntry: (entry) => ipcRenderer.send('floating-copy-entry', entry),
   onCopyResult: (callback) => ipcRenderer.on('copy-result', (event, result) => callback(result)),
+
+  // Always-reachable path to editing setup (backend URL, keys, etc.) or
+  // starting over, without needing to find the tray icon.
+  openSettings: () => ipcRenderer.send('floating-open-settings'),
 });

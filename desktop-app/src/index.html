@@ -44,6 +44,16 @@
   #status-dot.connected { background: var(--success); }
   #status-dot.error { background: var(--danger); }
   #status-text { font-size: 12px; color: var(--muted); }
+  #open-settings {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 15px;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin-left: 4px;
+  }
+  #open-settings:hover { color: var(--text); }
 
   #onboarding {
     padding: 20px 18px;
@@ -77,6 +87,11 @@
     background: var(--card);
     border: 1px solid var(--border);
     color: var(--accent);
+  }
+  #onboarding button.danger {
+    background: var(--card);
+    border: 1px solid var(--danger);
+    color: var(--danger);
   }
   #onboarding .error { color: var(--danger); font-size: 12px; margin-top: 8px; }
   #onboarding hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
@@ -134,7 +149,10 @@
   <div id="app">
     <header>
       <h1>ClipBridge</h1>
-      <div><span id="status-dot"></span><span id="status-text">Starting…</span></div>
+      <div>
+        <span id="status-dot"></span><span id="status-text">Starting…</span>
+        <button id="open-settings" type="button" title="Edit setup" style="display:none">⚙</button>
+      </div>
     </header>
 
     <div id="onboarding" style="display:none">
@@ -151,6 +169,8 @@
       <div class="field"><label>Device Name</label><input id="f-deviceName" placeholder="e.g. Andreas's PC"></div>
       <button id="save-setup">Save & Connect</button>
       <div class="error" id="setup-error"></div>
+      <button id="cancel-settings" type="button" class="secondary" style="display:none">Cancel</button>
+      <button id="reset-all" type="button" class="danger" style="display:none">Reset All (Start Over)</button>
     </div>
 
     <div id="main-view" style="display:none">

@@ -199,13 +199,23 @@ function setExpanded(expanded) {
   floatingWindow.webContents.send('set-expanded', expanded);
 }
 
+// Shared by the tray menu and the floating panel's settings button — both
+// need to reveal mainWindow *and* tell its renderer to jump straight to the
+// editable settings form, not just re-show whatever it already had on
+// screen (which, once configured, is the history view, not the form).
+function openSettingsWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.show();
+  mainWindow.webContents.send('open-settings-view');
+}
+
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'icon.png'));
   tray = new Tray(icon.resize({ width: 16, height: 16 }));
   tray.setToolTip('ClipBridge');
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Settings…', click: () => mainWindow.show() },
+    { label: 'Settings…', click: () => openSettingsWindow() },
     {
       label: 'Launch at Login',
       type: 'checkbox',
@@ -254,6 +264,20 @@ ipcMain.on('sync-result-from-main-window', (event, result) => {
 });
 
 ipcMain.on('floating-toggle-expand', () => setExpanded(!isExpanded));
+
+// The settings icon on the expanded panel — same destination as the tray's
+// "Settings…" item, just reachable without hunting for the tray icon.
+ipcMain.on('floating-open-settings', () => openSettingsWindow());
+
+// Editing settings (or resetting them) changes account config that Pusher
+// and the IPC listeners in renderer.js were wired up around at boot; rather
+// than trying to hot-swap all of that and risk duplicate listeners, just
+// restart cleanly so it boots fresh with whatever's now in the store.
+ipcMain.on('request-restart', () => {
+  app.relaunch();
+  app.isQuitting = true;
+  app.quit();
+});
 
 ipcMain.on('history-updated', (event, entries) => {
   if (floatingWindow && !floatingWindow.isDestroyed()) {
