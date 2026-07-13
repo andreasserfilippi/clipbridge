@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ClipBridge</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #000000;
+    --card: #1c1c1e;
+    --text: #f5f5f7;
+    --muted: #9a9a9e;
+    --accent: #0a84ff;
+    --border: #2c2c2e;
+    --success: #4fd671;
+    --danger: #ff453a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  header {
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 16px; margin: 0; }
+  #status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+    margin-right: 6px;
+  }
+  #status-dot.connected { background: var(--success); }
+  #status-dot.error { background: var(--danger); }
+  #status-text { font-size: 12px; color: var(--muted); }
+
+  #onboarding {
+    padding: 20px 18px;
+    overflow-y: auto;
+  }
+  #onboarding p { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0 0 16px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .field input {
+    width: 100%;
+    font-size: 14px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+  }
+  #onboarding button, #settings-view button {
+    width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    margin-top: 6px;
+    cursor: pointer;
+  }
+  #onboarding .error { color: var(--danger); font-size: 12px; margin-top: 8px; }
+
+  #main-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  #history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .entry {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .entry:hover { border-color: var(--accent); }
+  .entry .content {
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+  .entry img { max-width: 100%; max-height: 140px; border-radius: 6px; display: block; }
+  .entry .meta { margin-top: 5px; font-size: 11px; color: var(--muted); }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 40px 16px; }
+
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>ClipBridge</h1>
+      <div><span id="status-dot"></span><span id="status-text">Starting…</span></div>
+    </header>
+
+    <div id="onboarding" style="display:none">
+      <p>Enter the same values from your ClipBridge backend's environment variables. Everything is stored locally on this device.</p>
+      <div class="field"><label>Backend URL</label><input id="f-baseUrl" placeholder="https://your-deployment.vercel.app"></div>
+      <div class="field"><label>API Key</label><input id="f-apiKey" type="password" placeholder="CLIPBRIDGE_API_KEY"></div>
+      <div class="field"><label>Pusher Key</label><input id="f-pusherKey" placeholder="PUSHER_KEY (public, not the secret)"></div>
+      <div class="field"><label>Pusher Cluster</label><input id="f-pusherCluster" placeholder="e.g. us2"></div>
+      <div class="field"><label>Blob Read-Write Token</label><input id="f-blobToken" type="password" placeholder="BLOB_READ_WRITE_TOKEN"></div>
+      <div class="field"><label>Device Name</label><input id="f-deviceName" placeholder="e.g. Andreas's PC"></div>
+      <button id="save-setup">Save & Connect</button>
+      <div class="error" id="setup-error"></div>
+    </div>
+
+    <div id="main-view" style="display:none">
+      <div id="history"><div class="empty">Loading history…</div></div>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <script src="../node_modules/pusher-js/dist/web/pusher.min.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

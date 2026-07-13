@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/clipboard.js": {
+      "maxDuration": 30
+    }
+  }
+}

@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ClipBridge">
+<title>ClipBridge</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1c1c1e;
+    --muted: #6e6e73;
+    --accent: #007aff;
+    --border: #e5e5ea;
+    --success-bg: #e6f9ed;
+    --success-text: #1a7f37;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000;
+      --card: #1c1c1e;
+      --text: #f5f5f7;
+      --muted: #9a9a9e;
+      --accent: #0a84ff;
+      --border: #2c2c2e;
+      --success-bg: #0f2e1a;
+      --success-text: #4fd671;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 8px 4px 16px;
+  }
+  h1 { font-size: 20px; margin: 0; }
+  /* Standalone home-screen mode has no Safari chrome — no reload button,
+     no native pull-to-refresh. Both are reimplemented explicitly below. */
+  #refresh-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #refresh-btn:active { opacity: 0.6; }
+  #refresh-btn svg { width: 16px; height: 16px; stroke: var(--accent); }
+  #refresh-btn.spinning svg { animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #pull-indicator {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    width: 30px; height: 30px;
+    transform: translateX(-50%) translateY(-46px);
+    opacity: 0;
+    background: var(--card);
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    transition: opacity 0.15s ease;
+  }
+  #pull-indicator svg { width: 16px; height: 16px; stroke: var(--muted); }
+  #pull-indicator.ready svg { stroke: var(--accent); }
+  #pull-indicator.spinning svg { animation: spin 0.7s linear infinite; stroke: var(--accent); }
+  .banner {
+    background: var(--success-bg);
+    color: var(--success-text);
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .error {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 16px;
+    border-radius: 12px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: var(--bg);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  li {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  li:active {
+    opacity: 0.6;
+  }
+  .content {
+    font-size: 15px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+  }
+  .content.image {
+    display: block;
+  }
+  .content img {
+    max-width: 100%;
+    max-height: 420px;
+    width: auto;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto;
+  }
+  .meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .empty {
+    color: var(--muted);
+    font-size: 14px;
+    text-align: center;
+    padding: 40px 16px;
+  }
+  .unlock {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .unlock p {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .unlock input {
+    width: 100%;
+    font-size: 16px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .unlock button {
+    width: 100%;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+  }
+  .unlock button:active {
+    opacity: 0.7;
+  }
+  .unlock .unlock-error {
+    color: #ff453a;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+  <div id="pull-indicator">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 1 1-3-6.7"></path>
+      <path d="M21 3v6h-6"></path>
+    </svg>
+  </div>
+  <div class="header-row">
+    <h1>ClipBridge</h1>
+    <button id="refresh-btn" title="Refresh">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-3-6.7"></path>
+        <path d="M21 3v6h-6"></path>
+      </svg>
+    </button>
+  </div>
+  <div id="banner"></div>
+  <div id="content">Loading…</div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+
+    const bannerEl = document.getElementById('banner');
+    const contentEl = document.getElementById('content');
+    const toastEl = document.getElementById('toast');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const pullIndicator = document.getElementById('pull-indicator');
+
+    if (params.get('synced') === '1') {
+      bannerEl.innerHTML = '<div class="banner">✅ Clipboard synced</div>';
+    }
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), 1500);
+    }
+
+    function timeAgo(ts) {
+      const seconds = Math.floor((Date.now() - ts) / 1000);
+      if (seconds < 60) return 'just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return minutes + 'm ago';
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return hours + 'h ago';
+      const days = Math.floor(hours / 24);
+      return days + 'd ago';
+    }
+
+    function imageSrc(entry) {
+      // Images are stored either as a Blob storage URL (new, any size/format)
+      // or, for older entries, inline base64 (legacy, PNG only).
+      return entry.content.startsWith('http')
+        ? entry.content
+        : 'data:image/png;base64,' + entry.content;
+    }
+
+    async function copyEntry(entry) {
+      try {
+        if (entry.type === 'image') {
+          const res = await fetch(imageSrc(entry));
+          const blob = await res.blob();
+          await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+        } else {
+          await navigator.clipboard.writeText(entry.content);
+        }
+        showToast('Copied');
+      } catch (err) {
+        showToast('Copy failed');
+      }
+    }
+
+    function render(entries) {
+      if (entries.length === 0) {
+        contentEl.innerHTML = '<div class="empty">No clipboard history yet.</div>';
+        return;
+      }
+      const ul = document.createElement('ul');
+      for (const entry of entries) {
+        const li = document.createElement('li');
+        const contentDiv = document.createElement('div');
+        contentDiv.className = entry.type === 'image' ? 'content image' : 'content';
+        if (entry.type === 'image') {
+          const img = document.createElement('img');
+          img.src = imageSrc(entry);
+          contentDiv.appendChild(img);
+        } else {
+          contentDiv.textContent = entry.content;
+        }
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = entry.device + ' · ' + timeAgo(entry.timestamp);
+        li.appendChild(contentDiv);
+        li.appendChild(meta);
+        li.addEventListener('click', () => copyEntry(entry));
+        ul.appendChild(li);
+      }
+      contentEl.innerHTML = '';
+      contentEl.appendChild(ul);
+    }
+
+    function renderUnlockForm(errorMsg) {
+      contentEl.innerHTML =
+        '<div class="unlock">' +
+          '<p>Enter your ClipBridge API key once. It\'s stored in a secure cookie on this device — never in the URL, never shown again.</p>' +
+          '<input type="password" id="unlock-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="API key">' +
+          '<button id="unlock-submit">Unlock</button>' +
+          (errorMsg ? '<div class="unlock-error">' + errorMsg + '</div>' : '') +
+        '</div>';
+
+      document.getElementById('unlock-submit').addEventListener('click', async () => {
+        const input = document.getElementById('unlock-input');
+        const value = input.value.trim();
+        if (!value) return;
+        try {
+          const res = await fetch('/api/unlock', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiKey: value }),
+          });
+          if (!res.ok) {
+            renderUnlockForm('Incorrect key — try again.');
+            return;
+          }
+          load();
+        } catch (err) {
+          renderUnlockForm('Network error — try again.');
+        }
+      });
+    }
+
+    async function consumeTokenIfPresent() {
+      const token = params.get('token');
+      if (!token) return;
+
+      // Strip it from the address bar immediately, win or lose — it's
+      // single-use either way, so there's no reason to leave it visible.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('token');
+      window.history.replaceState({}, '', url);
+
+      try {
+        await fetch('/api/unlock', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+      } catch (err) {
+        // Ignore — load() below will fall back to the manual unlock form.
+      }
+    }
+
+    async function load() {
+      contentEl.textContent = 'Loading…';
+      try {
+        const res = await fetch('/api/clipboard/history', { credentials: 'include' });
+        if (res.status === 401) {
+          renderUnlockForm();
+          return;
+        }
+        if (!res.ok) {
+          contentEl.innerHTML = '<div class="error">Failed to load history (HTTP ' + res.status + ').</div>';
+          return;
+        }
+        const data = await res.json();
+        render(data.entries || []);
+      } catch (err) {
+        contentEl.innerHTML = '<div class="error">Network error loading history.</div>';
+      }
+    }
+
+    // ---------- Manual refresh: button + pull-to-refresh ----------
+    // Installed to the home screen, this runs standalone with no Safari
+    // chrome at all — no reload button, and no native pull-to-refresh
+    // gesture either (that belongs to Safari's UI, not the page). Both are
+    // reimplemented here so there's always a way to get a live update
+    // without force-quitting and reopening the app.
+
+    let refreshing = false;
+
+    async function doRefresh() {
+      if (refreshing) return;
+      refreshing = true;
+      refreshBtn.classList.add('spinning');
+      try {
+        await load();
+      } finally {
+        refreshing = false;
+        refreshBtn.classList.remove('spinning');
+      }
+    }
+
+    refreshBtn.addEventListener('click', doRefresh);
+
+    const PULL_THRESHOLD = 70;
+    let pulling = false;
+    let pullStartY = 0;
+
+    window.addEventListener('touchstart', (e) => {
+      if (window.scrollY === 0 && !refreshing) {
+        pulling = true;
+        pullStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!pulling) return;
+      const dy = e.touches[0].clientY - pullStartY;
+      if (dy <= 0) {
+        pullIndicator.style.opacity = 0;
+        return;
+      }
+      const dist = Math.min(dy, PULL_THRESHOLD * 1.4);
+      pullIndicator.style.transform = 'translateX(-50%) translateY(' + (dist - 46) + 'px) rotate(' + (dist * 3) + 'deg)';
+      pullIndicator.style.opacity = Math.min(dist / PULL_THRESHOLD, 1);
+      pullIndicator.classList.toggle('ready', dy >= PULL_THRESHOLD);
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      if (!pulling) return;
+      pulling = false;
+      const dy = e.changedTouches[0].clientY - pullStartY;
+      pullIndicator.style.opacity = 0;
+      pullIndicator.style.transform = '';
+      pullIndicator.classList.remove('ready');
+      if (dy >= PULL_THRESHOLD) doRefresh();
+    });
+
+    consumeTokenIfPresent().then(load);
+  </script>
+</body>
+</html>

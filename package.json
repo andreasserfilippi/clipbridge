@@ -1,0 +1,19 @@
+{
+  "name": "clipbridge",
+  "version": "1.0.0",
+  "description": "Cross-device clipboard sync backend (Vercel + KV + Pusher)",
+  "private": true,
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.38.0",
+    "@vercel/blob": "^2.6.1",
+    "heic-convert": "^2.1.0",
+    "nanoid": "^3.3.7",
+    "pusher": "^5.2.0",
+    "sharp": "^0.35.3"
+  }
+}
