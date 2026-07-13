@@ -22,7 +22,7 @@ Once it's deployed, open your new deployment's URL in a browser and click **"Set
 | Platform | What to do |
 |---|---|
 | 🪟 Windows | [Download the installer](https://github.com/andreasserfilippi/clipbridge/releases/latest) (`.exe`), run it, paste your setup code when asked |
-| 🍎 Mac | [Download the installer](https://github.com/andreasserfilippi/clipbridge/releases/latest) (`.dmg`), run it, paste your setup code when asked |
+| 🍎 Mac | [Download the installer](https://github.com/andreasserfilippi/clipbridge/releases/latest) (`.dmg`), run it, paste your setup code when asked. **macOS will say the app "is damaged and can't be opened"** since this build isn't notarized with a paid Apple Developer account; it's not actually damaged. After dragging it to Applications, open Terminal and run `xattr -cr /Applications/ClipBridge.app`, then open it normally. |
 | 📱 iPhone | Download all four [iOS Shortcuts](#ios-shortcuts), run **ClipBridge Setup** once and paste your setup code when asked |
 
 That's it: copy on one device (tap the iOS Shortcut, or click the desktop floating button), and paste on another.
