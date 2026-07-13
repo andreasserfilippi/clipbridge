@@ -180,7 +180,11 @@ npm install
 npm start
 ```
 
-First launch shows a small setup window asking for the same values as the iOS Shortcut (backend URL, API key, Pusher key/cluster, Blob token, device name). Once saved, that window hides permanently — it just keeps the config, the Pusher connection, and history in sync in the background from then on. The entire visible UI is a small floating button:
+First launch shows a small setup window asking for the same values as the iOS Shortcut (backend URL, API key, Pusher key/cluster, Blob token, device name). Once saved, that window hides permanently — it just keeps the config, the Pusher connection, and history in sync in the background from then on.
+
+**Setting up more than one device is one paste, not five.** Every value except the device name is the same across every device *you* own — they're specific to your deployment, not per-device. Visit your own deployment's URL (e.g. `https://your-deployment.vercel.app`) and click **"Setup code"** in the header — it bundles those values (pulled live from your Vercel project's own environment variables via `GET /api/setup-code`, nothing centralized or shared between users) into one code on your clipboard. Paste that into any new device's setup window, hit "Fill from code," type a device name, done. This is also how you'd re-onboard a device after wiping its local config.
+
+The entire visible UI, day to day, is a small floating button:
 
 - **Click** it to send whatever's currently on your clipboard — same one-tap model as the iOS Shortcut, nothing syncs on its own.
 - **Right-click, or the small handle on its edge**, expands it into a compact history panel — tap any entry to copy it back to your clipboard.
