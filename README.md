@@ -19,9 +19,7 @@ Every request (`POST` and both `GET`s) requires the `x-api-key` header. There is
 
 Each user runs their own instance with their own API key, KV store, and Pusher account — nothing is shared between deployments.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repo-url=https%3A%2F%2Fgithub.com%2FYOUR_GITHUB_USERNAME%2FYOUR_REPO_NAME&env=CLIPBRIDGE_API_KEY,PUSHER_APP_ID,PUSHER_KEY,PUSHER_SECRET,PUSHER_CLUSTER&envDescription=Required%20environment%20variables%20for%20ClipBridge&envLink=https%3A%2F%2Fgithub.com%2FYOUR_GITHUB_USERNAME%2FYOUR_REPO_NAME%2Fblob%2Fmain%2F.env.example&stores=%5B%7B%22type%22%3A%22kv%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D)
-
-> Update `YOUR_GITHUB_USERNAME/YOUR_REPO_NAME` in the button URL above once this is pushed to GitHub.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repo-url=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge&env=CLIPBRIDGE_API_KEY,PUSHER_APP_ID,PUSHER_KEY,PUSHER_SECRET,PUSHER_CLUSTER&envDescription=Required%20environment%20variables%20for%20ClipBridge&envLink=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge%2Fblob%2Fmaster%2F.env.example&stores=%5B%7B%22type%22%3A%22kv%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D)
 
 The button will:
 - Fork/clone this repo into a new Vercel project
