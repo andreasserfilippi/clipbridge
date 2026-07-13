@@ -61,6 +61,27 @@ function showOnboarding() {
   setStatus('Setup required', '');
 }
 
+document.getElementById('fill-from-code').addEventListener('click', () => {
+  const errorEl = document.getElementById('setup-error');
+  const raw = document.getElementById('f-setup-code').value.trim();
+  if (!raw) {
+    errorEl.textContent = 'Paste a setup code first.';
+    return;
+  }
+  try {
+    const decoded = JSON.parse(atob(raw));
+    document.getElementById('f-baseUrl').value = decoded.baseUrl || '';
+    document.getElementById('f-apiKey').value = decoded.apiKey || '';
+    document.getElementById('f-pusherKey').value = decoded.pusherKey || '';
+    document.getElementById('f-pusherCluster').value = decoded.pusherCluster || '';
+    document.getElementById('f-blobToken').value = decoded.blobToken || '';
+    errorEl.textContent = '';
+    document.getElementById('f-deviceName').focus();
+  } catch (err) {
+    errorEl.textContent = 'That setup code looks invalid — check you copied all of it.';
+  }
+});
+
 document.getElementById('save-setup').addEventListener('click', () => {
   const vals = {
     baseUrl: document.getElementById('f-baseUrl').value.trim().replace(/\/$/, ''),

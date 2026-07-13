@@ -4,6 +4,7 @@
 !.env.example
 node_modules/
 .vercel/
+desktop-app/dist/
 *.log
 .agents/
 .claude/

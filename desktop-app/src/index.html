@@ -73,7 +73,13 @@
     margin-top: 6px;
     cursor: pointer;
   }
+  #onboarding button.secondary {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--accent);
+  }
   #onboarding .error { color: var(--danger); font-size: 12px; margin-top: 8px; }
+  #onboarding hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 
   #main-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   #history {
@@ -132,7 +138,11 @@
     </header>
 
     <div id="onboarding" style="display:none">
-      <p>Enter the same values from your ClipBridge backend's environment variables. Everything is stored locally on this device.</p>
+      <p>Already set up on another device? Paste its setup code (copy it from the "Setup code" button on your ClipBridge history page) to fill in everything below except the device name.</p>
+      <div class="field"><input id="f-setup-code" placeholder="Paste setup code here"></div>
+      <button id="fill-from-code" type="button" class="secondary">Fill from code</button>
+      <hr>
+      <p>Or enter the same values from your ClipBridge backend's environment variables by hand. Everything is stored locally on this device.</p>
       <div class="field"><label>Backend URL</label><input id="f-baseUrl" placeholder="https://your-deployment.vercel.app"></div>
       <div class="field"><label>API Key</label><input id="f-apiKey" type="password" placeholder="CLIPBRIDGE_API_KEY"></div>
       <div class="field"><label>Pusher Key</label><input id="f-pusherKey" placeholder="PUSHER_KEY (public, not the secret)"></div>

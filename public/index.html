@@ -65,6 +65,24 @@
   #refresh-btn.spinning svg { animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  /* Bundles the account values a new device's onboarding needs into one
+     paste-able code, so setting up another device isn't five separate
+     copy/pastes. */
+  #setup-btn {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 16px;
+    border: none;
+    background: var(--card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #setup-btn:active { opacity: 0.6; }
+
   #pull-indicator {
     position: fixed;
     top: 10px;
@@ -223,12 +241,15 @@
   </div>
   <div class="header-row">
     <h1>ClipBridge</h1>
-    <button id="refresh-btn" title="Refresh">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 12a9 9 0 1 1-3-6.7"></path>
-        <path d="M21 3v6h-6"></path>
-      </svg>
-    </button>
+    <div class="header-actions">
+      <button id="setup-btn" title="Copy a setup code for a new device">Setup code</button>
+      <button id="refresh-btn" title="Refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-3-6.7"></path>
+          <path d="M21 3v6h-6"></path>
+        </svg>
+      </button>
+    </div>
   </div>
   <div id="banner"></div>
   <div id="content">Loading…</div>
@@ -242,6 +263,7 @@
     const toastEl = document.getElementById('toast');
     const refreshBtn = document.getElementById('refresh-btn');
     const pullIndicator = document.getElementById('pull-indicator');
+    const setupBtn = document.getElementById('setup-btn');
 
     if (params.get('synced') === '1') {
       bannerEl.innerHTML = '<div class="banner">✅ Clipboard synced</div>';
@@ -410,6 +432,25 @@
     }
 
     refreshBtn.addEventListener('click', doRefresh);
+
+    // ---------- Setup code: bundle account values for a new device ----------
+
+    setupBtn.addEventListener('click', async () => {
+      const original = setupBtn.textContent;
+      setupBtn.textContent = '…';
+      try {
+        const res = await fetch('/api/setup-code', { credentials: 'include' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const code = btoa(JSON.stringify(data));
+        await navigator.clipboard.writeText(code);
+        showToast('Setup code copied');
+      } catch (err) {
+        showToast('Failed to copy setup code');
+      } finally {
+        setupBtn.textContent = original;
+      }
+    });
 
     const PULL_THRESHOLD = 70;
     let pulling = false;

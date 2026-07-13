@@ -1,4 +1,4 @@
-const { app, Tray, Menu, BrowserWindow, nativeImage, ipcMain, screen } = require('electron');
+const { app, Tray, Menu, BrowserWindow, nativeImage, ipcMain, screen, dialog } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
@@ -18,6 +18,7 @@ let tray = null;
 let mainWindow = null;
 let floatingWindow = null;
 let isExpanded = false;
+let wasConfiguredAtLaunch = false;
 let collapsedPos = null;
 // Separate from collapsedPos so the circle and the expanded panel can each
 // be dragged to their own spot without fighting over one remembered place.
@@ -274,7 +275,34 @@ ipcMain.on('copy-result-from-main-window', (event, result) => {
 
 ipcMain.on('renderer-ready', () => {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide();
+  // Only right after a fresh setup, never on a normal launch of an
+  // already-configured install — asked once, respected from then on.
+  if (!wasConfiguredAtLaunch && !store.get('loginItemConfigured')) {
+    promptLoginItem();
+  }
 });
+
+function promptLoginItem() {
+  store.set('loginItemConfigured', true); // don't ask again regardless of the answer
+  dialog
+    .showMessageBox({
+      type: 'question',
+      buttons: ['Launch at Login', 'Not Now'],
+      defaultId: 0,
+      cancelId: 1,
+      title: 'ClipBridge',
+      message: 'Launch ClipBridge automatically when you log in?',
+      detail: 'You can change this anytime from the tray menu.',
+    })
+    .then((result) => {
+      const enable = result.response === 0;
+      app.setLoginItemSettings({
+        openAtLogin: enable,
+        path: process.execPath,
+        args: app.isPackaged ? [] : [path.resolve(__dirname, '..')],
+      });
+    });
+}
 
 ipcMain.handle('floating-get-position', () => (floatingWindow ? floatingWindow.getPosition() : [0, 0]));
 
@@ -316,29 +344,16 @@ app.whenReady().then(() => {
     app.dock.hide();
   }
 
-  // Launch-at-login defaults to on the first time the app ever runs — it's
-  // meant to be always-running background infrastructure. After that, the
-  // tray checkbox is the source of truth, so a later choice to turn it off
-  // isn't fought on the next launch.
-  //
-  // Unpackaged (dev, run via `electron .`), setLoginItemSettings' default
-  // args would launch a bare electron.exe with nothing to load — it needs
-  // this app's directory passed explicitly, the same argument `electron .`
-  // passes by hand. Once packaged, the built .exe *is* the app, so no args.
-  if (!store.get('loginItemConfigured')) {
-    app.setLoginItemSettings({
-      openAtLogin: true,
-      path: process.execPath,
-      args: app.isPackaged ? [] : [path.resolve(__dirname, '..')],
-    });
-    store.set('loginItemConfigured', true);
-  }
+  // Whether login-item is offered as a prompt (fresh setup) or left alone
+  // entirely (already-configured install, every normal launch after that)
+  // depends on this being captured before onboarding could possibly run.
+  wasConfiguredAtLaunch = isConfigured();
 
   createWindow();
   // Only first-run setup needs the window visible; once configured, the
   // floating overlay is the entire UI and this stays hidden in the
   // background (renderer-ready below also hides it after a fresh setup).
-  if (!isConfigured()) mainWindow.show();
+  if (!wasConfiguredAtLaunch) mainWindow.show();
 
   createFloatingWindow();
   try {
