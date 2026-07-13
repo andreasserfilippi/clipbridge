@@ -199,30 +199,14 @@ function setExpanded(expanded) {
   floatingWindow.webContents.send('set-expanded', expanded);
 }
 
-// Clears the saved account config and sends the (hidden, background)
-// mainWindow back to onboarding — the only way back once a device has been
-// set up, short of manually finding and deleting the config file on disk.
-function resetConfiguration() {
-  dialog
-    .showMessageBox({
-      type: 'warning',
-      buttons: ['Reset', 'Cancel'],
-      defaultId: 1,
-      cancelId: 1,
-      title: 'ClipBridge',
-      message: 'Reset ClipBridge configuration?',
-      detail:
-        "This clears the saved backend URL, API key, and device name from this computer. You'll need to paste a setup code again to reconnect.",
-    })
-    .then((result) => {
-      if (result.response !== 0) return;
-      store.clear();
-      wasConfiguredAtLaunch = false;
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.reload();
-        mainWindow.show();
-      }
-    });
+// Shared by the tray menu and the floating panel's settings button — both
+// need to reveal mainWindow *and* tell its renderer to jump straight to the
+// editable settings form, not just re-show whatever it already had on
+// screen (which, once configured, is the history view, not the form).
+function openSettingsWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.show();
+  mainWindow.webContents.send('open-settings-view');
 }
 
 function createTray() {
@@ -231,7 +215,7 @@ function createTray() {
   tray.setToolTip('ClipBridge');
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Settings…', click: () => mainWindow.show() },
+    { label: 'Settings…', click: () => openSettingsWindow() },
     {
       label: 'Launch at Login',
       type: 'checkbox',
@@ -247,11 +231,6 @@ function createTray() {
         if (menuItem.checked) floatingWindow.show();
         else floatingWindow.hide();
       },
-    },
-    { type: 'separator' },
-    {
-      label: 'Reset Configuration…',
-      click: () => resetConfiguration(),
     },
     { type: 'separator' },
     {
@@ -285,6 +264,20 @@ ipcMain.on('sync-result-from-main-window', (event, result) => {
 });
 
 ipcMain.on('floating-toggle-expand', () => setExpanded(!isExpanded));
+
+// The settings icon on the expanded panel — same destination as the tray's
+// "Settings…" item, just reachable without hunting for the tray icon.
+ipcMain.on('floating-open-settings', () => openSettingsWindow());
+
+// Editing settings (or resetting them) changes account config that Pusher
+// and the IPC listeners in renderer.js were wired up around at boot; rather
+// than trying to hot-swap all of that and risk duplicate listeners, just
+// restart cleanly so it boots fresh with whatever's now in the store.
+ipcMain.on('request-restart', () => {
+  app.relaunch();
+  app.isQuitting = true;
+  app.quit();
+});
 
 ipcMain.on('history-updated', (event, entries) => {
   if (floatingWindow && !floatingWindow.isDestroyed()) {

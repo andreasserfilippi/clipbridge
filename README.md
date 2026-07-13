@@ -8,12 +8,13 @@ This repo has two parts: a Vercel backend (API + Redis + Pusher) that stores cli
 
 **1. Deploy your own backend**: click the button, follow the prompts (it creates the Redis and Blob storage for you, then asks for a few remaining values):
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge&env=CLIPBRIDGE_API_KEY,PUSHER_APP_ID,PUSHER_KEY,PUSHER_SECRET,PUSHER_CLUSTER&envDescription=Required%20environment%20variables%20for%20ClipBridge&envLink=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge%2Fblob%2Fmaster%2F.env.example&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge&env=CLIPBRIDGE_API_KEY,PUSHER_APP_ID,PUSHER_KEY,PUSHER_SECRET,PUSHER_CLUSTER,BLOB_READ_WRITE_TOKEN&envDescription=Required%20environment%20variables%20for%20ClipBridge&envLink=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge%2Fblob%2Fmaster%2F.env.example&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D)
 
-Redis and Blob storage get created for you automatically; just click through those. You'll then be asked to fill in two things by hand:
+Redis gets created and fully wired up for you automatically; just click through that part. Blob storage also gets created, but Vercel's current flow doesn't auto-inject the token this project actually needs (`BLOB_READ_WRITE_TOKEN`); it only wires up `BLOB_STORE_ID` and `BLOB_WEBHOOK_PUBLIC_KEY`, neither of which the app reads. You'll be asked to fill in three things by hand:
 
 - **`CLIPBRIDGE_API_KEY`**: this is your own password, not something to look up. Make up any random string (or run `openssl rand -hex 32` if you want one generated for you).
 - **`PUSHER_APP_ID`, `PUSHER_KEY`, `PUSHER_SECRET`, `PUSHER_CLUSTER`**: sign up free at [dashboard.pusher.com](https://dashboard.pusher.com/), create a **Channels** app, then copy these 4 values from its "App Keys" tab.
+- **`BLOB_READ_WRITE_TOKEN`**: after the Blob store is created, go to Storage → your Blob store → its own ".env.local" / Quickstart tab and copy the token shown there. (If you don't get prompted for it during the initial deploy, add it afterward under Project Settings → Environment Variables, then redeploy; env var changes don't apply to an already-built deployment.)
 
 Once it's deployed, open your new deployment's URL in a browser and click **"Setup code"** in the header; that copies one code to your clipboard containing everything every client below needs.
 
@@ -22,7 +23,7 @@ Once it's deployed, open your new deployment's URL in a browser and click **"Set
 | Platform | What to do |
 |---|---|
 | 🪟 Windows | [Download the installer](https://github.com/andreasserfilippi/clipbridge/releases/latest) (`.exe`), run it, paste your setup code when asked |
-| 🍎 Mac | [Download the installer](https://github.com/andreasserfilippi/clipbridge/releases/latest) (`.dmg`), run it, paste your setup code when asked |
+| 🍎 Mac | [Download the installer](https://github.com/andreasserfilippi/clipbridge/releases/latest) (`.dmg`), run it, paste your setup code when asked. **macOS will say the app "is damaged and can't be opened"** since this build isn't notarized with a paid Apple Developer account; it's not actually damaged. After dragging it to Applications, open Terminal and run `xattr -cr /Applications/ClipBridge.app`, then open it normally. |
 | 📱 iPhone | Download all four [iOS Shortcuts](#ios-shortcuts), run **ClipBridge Setup** once and paste your setup code when asked |
 
 That's it: copy on one device (tap the iOS Shortcut, or click the desktop floating button), and paste on another.
@@ -49,7 +50,7 @@ See [Quick start](#quick-start) above for the button itself. This section covers
 The button will:
 - Fork/clone this repo into a new Vercel project
 - Prompt you to add the **Upstash Redis** Marketplace integration, which auto-injects `KV_REST_API_URL` / `KV_REST_API_TOKEN` so you don't set those by hand
-- Prompt you to create a **public Blob** store, which generates a `BLOB_READ_WRITE_TOKEN` but does not automatically attach it to the project. After deploying, go to your project's **Storage** tab, open the Blob store, and use its **Integrations** (or **Connect Project**) option to link it, this is what actually injects `BLOB_READ_WRITE_TOKEN` as an environment variable. Without this step, image uploads will fail with a missing-token error.
+- Prompt you to create a **public Blob** store. Vercel's current flow only auto-injects `BLOB_STORE_ID` and `BLOB_WEBHOOK_PUBLIC_KEY` from it, neither of which this app reads, so `BLOB_READ_WRITE_TOKEN` is included in the button's explicit env prompt instead (see [Quick start](#quick-start) for where to find that value)
 - Prompt you for the remaining environment variables listed below (Pushcut is optional and not prompted for; add `PUSHCUT_WEBHOOK_URL` manually later if you want iPhone push notifications)
 
 ### Manual setup

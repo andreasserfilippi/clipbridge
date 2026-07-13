@@ -439,14 +439,26 @@
       const original = setupBtn.textContent;
       setupBtn.textContent = '…';
       try {
-        const res = await fetch('/api/setup-code', { credentials: 'include' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        const code = btoa(JSON.stringify(data));
-        await navigator.clipboard.writeText(code);
-        showToast('Setup code copied');
-      } catch (err) {
-        showToast('Failed to copy setup code');
+        let code;
+        try {
+          const res = await fetch('/api/setup-code', { credentials: 'include' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          code = btoa(JSON.stringify(data));
+        } catch (err) {
+          // Fetch/auth failure — say what actually went wrong instead of a generic message.
+          showToast('Setup code failed: ' + err.message);
+          return;
+        }
+        try {
+          // Separate from the fetch above: some browsers (notably Safari) block
+          // clipboard writes that happen after an awaited network call, since the
+          // user-gesture context that permits it can expire during the await.
+          await navigator.clipboard.writeText(code);
+          showToast('Setup code copied');
+        } catch (err) {
+          window.prompt('Could not copy automatically — copy this code manually:', code);
+        }
       } finally {
         setupBtn.textContent = original;
       }
