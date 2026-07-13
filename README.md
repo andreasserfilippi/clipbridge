@@ -1,8 +1,8 @@
 # ClipBridge
 
-Cross-device clipboard sync. Copy on one device, send it on purpose, paste on another — iPhone, Windows today, Mac coming.
+Cross-device clipboard sync. Copy on one device, send it on purpose, paste on another — iPhone, Windows, and Mac.
 
-This repo has two parts: a Vercel backend (API + Redis + Pusher) that stores clipboard entries (text and images), converts every image to JPEG server-side for universal viewability, and pushes real-time notifications when new content arrives; and [`desktop-app`](desktop-app), an Electron client (Windows now, Mac planned — same codebase) with a small always-on-top floating button. The iOS side is a Shortcut plus a hosted [history page](#success--history-page) for the browser-facing bits.
+This repo has two parts: a Vercel backend (API + Redis + Pusher) that stores clipboard entries (text and images), converts every image to JPEG server-side for universal viewability, and pushes real-time notifications when new content arrives; and [`desktop-app`](desktop-app), an Electron client (Windows and Mac, same codebase) with a small always-on-top floating button. The iOS side is [four Shortcuts](#ios-shortcuts) plus a hosted [history page](#success--history-page) for the browser-facing bits.
 
 ## How it works
 
@@ -19,11 +19,13 @@ Every request (`POST` and both `GET`s) requires the `x-api-key` header. There is
 
 Each user runs their own instance with their own API key, KV store, and Pusher account — nothing is shared between deployments.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repo-url=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge&env=CLIPBRIDGE_API_KEY,PUSHER_APP_ID,PUSHER_KEY,PUSHER_SECRET,PUSHER_CLUSTER&envDescription=Required%20environment%20variables%20for%20ClipBridge&envLink=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge%2Fblob%2Fmaster%2F.env.example&stores=%5B%7B%22type%22%3A%22kv%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge&env=CLIPBRIDGE_API_KEY,PUSHER_APP_ID,PUSHER_KEY,PUSHER_SECRET,PUSHER_CLUSTER&envDescription=Required%20environment%20variables%20for%20ClipBridge&envLink=https%3A%2F%2Fgithub.com%2Fandreasserfilippi%2Fclipbridge%2Fblob%2Fmaster%2F.env.example&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-kv%22%2C%22protocol%22%3A%22storage%22%7D%2C%7B%22type%22%3A%22blob%22%2C%22access%22%3A%22public%22%7D%5D)
+
+**Requires this repo to be public** — the Deploy Button can't clone a private repository into someone else's account.
 
 The button will:
 - Fork/clone this repo into a new Vercel project
-- Prompt you to create and attach a **Redis** store (Upstash, via Vercel Marketplace) — this auto-injects `KV_REST_API_URL` / `KV_REST_API_TOKEN`, you don't set those by hand
+- Prompt you to add the **Upstash Redis** Marketplace integration — this auto-injects `KV_REST_API_URL` / `KV_REST_API_TOKEN`, you don't set those by hand
 - Prompt you to create a **public Blob** store — auto-injects `BLOB_READ_WRITE_TOKEN`, used for image uploads
 - Prompt you for the remaining environment variables listed below (Pushcut is optional and not prompted for — add `PUSHCUT_WEBHOOK_URL` manually later if you want iPhone push notifications)
 
@@ -98,7 +100,7 @@ Vercel serverless functions cap request bodies at 4.5MB, and inline base64 (33% 
 1. The client PUTs the raw image bytes straight to `https://blob.vercel-storage.com/<filename>` with header `Authorization: Bearer $BLOB_READ_WRITE_TOKEN` (the same token from your env vars — sync clients need this value directly, same trust model as the API key). Response is JSON: `{ "url": "https://....public.blob.vercel-storage.com/...", ... }`.
 2. The client then calls `POST /api/clipboard` as normal, but with `content` set to that returned `url` instead of raw base64.
 3. The backend fetches that original upload, converts it to JPEG server-side (`lib/imageConvert.js`, using `sharp` for most formats and `heic-convert` for HEIC/HEIF specifically, since patent licensing keeps HEIC decoding out of sharp's prebuilt binaries), re-uploads the JPEG to Blob, and stores *that* URL as the entry's `content`.
-4. `GET /api/clipboard` and every client (iOS, Windows, Mac later) just fetch/render that URL directly — always a JPEG, regardless of what format the original client captured (HEIC, PNG, WebP, whatever). No per-client format handling needed anywhere downstream.
+4. `GET /api/clipboard` and every client (iOS, Windows, Mac) just fetch/render that URL directly — always a JPEG, regardless of what format the original client captured (HEIC, PNG, WebP, whatever). No per-client format handling needed anywhere downstream.
 
 Small inline base64 images (as sent by earlier versions of this project) are also normalized through the same conversion step. `api/clipboard.js`'s `maxDuration` is raised to 30s (`vercel.json`) to give the fetch-convert-reupload round trip room to run.
 
@@ -138,7 +140,7 @@ Clients subscribe to the Pusher channel `clipbridge` and listen for the `new-cli
   store.js                  Redis read/write helpers for clipboard entries
 /public
   index.html                Success + history page opened by the iOS Shortcut
-/desktop-app                Electron client (Windows now, Mac planned) — see below
+/desktop-app                Electron client (Windows and Mac) — see below
   /src
     main.js                  Main process: floating overlay + hidden setup/background window
     preload.js, renderer.js   The hidden background window — holds config, Pusher, uploads
@@ -170,9 +172,27 @@ Keep the title/text static and don't try to pass per-call data through the webho
 
 This is entirely optional — leave `PUSHCUT_WEBHOOK_URL` unset and the backend just skips this step silently.
 
-## Desktop app (Windows now, Mac planned)
+## iOS Shortcuts
 
-Lives in [`desktop-app`](desktop-app), an Electron client. Run it with:
+Four shortcuts, distributed as public iCloud links with no personal data baked in — each user runs their own copy against their own deployment.
+
+1. **[ClipBridge Setup](https://www.icloud.com/shortcuts/e3225c8c13a84c45961d4fd67db375be)** — run this once. It asks for your setup code and a device name, then saves them to `ClipBridge/config.json` in iCloud Drive. The other three shortcuts read from that file every time they run.
+2. **[Copy Text](https://www.icloud.com/shortcuts/59782e7eb90246c79ac080093bf8d2a0)** — sends whatever's on the clipboard as a text entry.
+3. **[Copy Image](https://www.icloud.com/shortcuts/2cee60c9e9a34619b7ba52b17ec26efc)** — uploads the clipboard image straight to your Blob store, then sends the resulting URL as an entry (same flow as [Image storage](#image-storage)).
+4. **[Receive Clipboard](https://www.icloud.com/shortcuts/2975964423fb48e58d4357a9538c6485)** — fetches the latest entry and copies it to the clipboard, downloading the image itself first if it's an image entry.
+
+### Setup
+
+1. Download all four shortcuts above.
+2. Open your own deployment's URL and click **"Setup code"** in the header (same code used for the [desktop app](#desktop-app)) to copy a setup code to your clipboard.
+3. Run **ClipBridge Setup**, paste the code when asked, then name the device.
+4. Add Copy Text / Copy Image / Receive Clipboard to your Home Screen or as widgets — they work immediately, no further setup needed.
+
+Connecting push notifications (Pushcut) is a separate, optional step — see [Push notifications to iPhone](#push-notifications-to-iphone) above.
+
+## Desktop app
+
+Lives in [`desktop-app`](desktop-app), an Electron client. Grab a prebuilt installer from [Releases](https://github.com/andreasserfilippi/clipbridge/releases/latest) (Windows `.exe`, Mac `.dmg`), or run from source:
 
 ```bash
 cd desktop-app
@@ -193,13 +213,14 @@ The entire visible UI, day to day, is a small floating button:
 
 There's no clipboard-change watcher at all — a click just reads whatever's on the clipboard at that instant (`clipboard.readText()` / `clipboard.readImage()`, Electron's cross-platform API) and sends it. That's what earlier versions of this app got wrong: auto-syncing on every clipboard change sounds convenient until it means every password manager fill and every dictation tool's paste-via-clipboard trick also gets broadcast to every device. Manual-only, matching the iOS Shortcuts, fixed that. Receiving updates from other devices is the same Pusher push used everywhere else in this project — no polling there either.
 
-Not built yet: Mac should mostly be a packaging exercise on the same Electron codebase, not a rewrite — the manual-click model means there's no platform-specific clipboard-watching problem to solve (that would only matter for an auto-sync design, which this deliberately isn't). Neither installers (Windows or Mac) nor a one-click Vercel deploy for non-technical users exist yet either — see [Roadmap](#roadmap).
+Packaged installers exist for both platforms (NSIS `.exe` for Windows, `.dmg` for Mac) via `npm run dist:win` / `npm run dist:mac` in `desktop-app` — no need to run from source.
 
 ## Roadmap
 
 - [x] Vercel backend (API + KV + Pusher)
-- [x] iOS Shortcut + hosted Safari history page
+- [x] iOS Shortcuts + hosted Safari history page
 - [x] Windows background app
-- [ ] Mac background app
-- [ ] Packaged installers (Windows, Mac) instead of running from source
-- [ ] Downloadable iOS Shortcuts with a guided API-key setup prompt
+- [x] Mac background app
+- [x] Packaged installers (Windows, Mac) instead of running from source
+- [x] Downloadable iOS Shortcuts with a guided setup-code prompt
+- [ ] Fix duplicate clipboard uploads + add pause/resume sync toggle
