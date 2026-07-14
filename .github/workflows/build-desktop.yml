@@ -1,0 +1,68 @@
+name: Build desktop installers
+
+# Runs whenever desktop-app changes land on master (either computer, any
+# push), plus a manual trigger for rebuilding on demand without needing a
+# new commit. Each platform must build on that platform's own runner --
+# electron-builder can't cross-compile a .dmg on Linux/Windows or a
+# working .exe on macOS.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'desktop-app/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: desktop-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run dist:mac
+      - name: Upload to release, replacing any older mac asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          NEW_ASSET=$(basename dist/*.dmg)
+          gh release upload v1 dist/*.dmg --repo "$GITHUB_REPOSITORY" --clobber
+          for old in $(gh release view v1 --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep '\.dmg$' || true); do
+            if [ "$old" != "$NEW_ASSET" ]; then
+              gh release delete-asset v1 "$old" --repo "$GITHUB_REPOSITORY" --yes
+            fi
+          done
+
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run dist:win
+      - name: Upload to release, replacing any older windows asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          NEW_ASSET=$(basename dist/*.exe)
+          gh release upload v1 dist/*.exe --repo "$GITHUB_REPOSITORY" --clobber
+          for old in $(gh release view v1 --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep '\.exe$' || true); do
+            if [ "$old" != "$NEW_ASSET" ]; then
+              gh release delete-asset v1 "$old" --repo "$GITHUB_REPOSITORY" --yes
+            fi
+          done
