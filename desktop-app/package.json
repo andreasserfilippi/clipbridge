@@ -1,6 +1,6 @@
 {
   "name": "clipbridge-desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "ClipBridge background client for Mac and Windows",
   "private": true,
   "license": "MIT",
