@@ -1,5 +1,6 @@
 const { isAuthorized } = require('../lib/auth');
 const { checkRateLimit } = require('../lib/rateLimit');
+const { applyCors } = require('../lib/cors');
 
 // Bundles the account-level values every device needs (everything except
 // the per-device name) so a device that's already set up can hand a new
@@ -7,6 +8,8 @@ const { checkRateLimit } = require('../lib/rateLimit');
 // returns anything a caller couldn't already get by reading their own
 // Vercel project's environment variables — this just saves the trip.
 module.exports = async (req, res) => {
+  if (applyCors(req, res)) return;
+
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     res.status(405).json({ error: 'Method not allowed' });

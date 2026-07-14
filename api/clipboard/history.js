@@ -2,8 +2,11 @@ const { isAuthorized } = require('../../lib/auth');
 const { checkRateLimit } = require('../../lib/rateLimit');
 const { getHistory } = require('../../lib/store');
 const { MAX_HISTORY_ENTRIES } = require('../../lib/config');
+const { applyCors } = require('../../lib/cors');
 
 module.exports = async (req, res) => {
+  if (applyCors(req, res)) return;
+
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     res.status(405).json({ error: 'Method not allowed' });

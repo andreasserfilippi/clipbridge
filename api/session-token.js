@@ -3,12 +3,15 @@ const { isAuthorized } = require('../lib/auth');
 const { checkRateLimit } = require('../lib/rateLimit');
 const { getRedis } = require('../lib/redis');
 const { SESSION_TOKEN_PREFIX, SESSION_TOKEN_TTL_SECONDS } = require('../lib/config');
+const { applyCors } = require('../lib/cors');
 
 // Called by sync clients (e.g. the iOS Shortcut, using its cached x-api-key)
 // to get a short-lived, single-use token safe to put in a URL. The Safari
 // success page exchanges it via /api/unlock for the real session cookie —
 // the durable API key itself never has to travel through a URL.
 module.exports = async (req, res) => {
+  if (applyCors(req, res)) return;
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     res.status(405).json({ error: 'Method not allowed' });

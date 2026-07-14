@@ -6,10 +6,13 @@ const { notifyPushcut } = require('../lib/pushcut');
 const { getImageBuffer, uploadToBlob } = require('../lib/blob');
 const { toJpeg } = require('../lib/imageConvert');
 const { MAX_CONTENT_BYTES } = require('../lib/config');
+const { applyCors } = require('../lib/cors');
 
 const VALID_TYPES = new Set(['text', 'image']);
 
 module.exports = async (req, res) => {
+  if (applyCors(req, res)) return;
+
   let authorized;
   try {
     authorized = isAuthorized(req);

@@ -2,6 +2,7 @@ const { constantTimeEquals, SESSION_COOKIE } = require('../lib/auth');
 const { checkRateLimit } = require('../lib/rateLimit');
 const { getRedis } = require('../lib/redis');
 const { SESSION_TOKEN_PREFIX } = require('../lib/config');
+const { applyCors } = require('../lib/cors');
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
@@ -17,6 +18,8 @@ function setSessionCookie(res, apiKey) {
 // client via /api/session-token, for an HttpOnly session cookie. Either way
 // the durable key never has to travel through a URL.
 module.exports = async (req, res) => {
+  if (applyCors(req, res)) return;
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     res.status(405).json({ error: 'Method not allowed' });
