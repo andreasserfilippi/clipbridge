@@ -44,6 +44,23 @@ jobs:
               gh release delete-asset v1 "$old" --repo "$GITHUB_REPOSITORY" --yes
             fi
           done
+      - name: Archive this version privately, keep last 5
+        env:
+          GH_TOKEN: ${{ secrets.ARCHIVE_REPO_TOKEN }}
+          ARCHIVE_REPO: andreasserfilippi/clipbridge-builds
+        run: |
+          set -e
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="mac-$VERSION"
+          gh release create "$TAG" dist/*.dmg --repo "$ARCHIVE_REPO" --title "Mac $VERSION" --notes "Archived build. Not for distribution." \
+            || gh release upload "$TAG" dist/*.dmg --repo "$ARCHIVE_REPO" --clobber
+          i=0
+          for t in $(gh release list --repo "$ARCHIVE_REPO" --json tagName,createdAt -q 'sort_by(.createdAt) | reverse | .[].tagName' | grep '^mac-' || true); do
+            i=$((i + 1))
+            if [ "$i" -gt 5 ]; then
+              gh release delete "$t" --repo "$ARCHIVE_REPO" --yes --cleanup-tag
+            fi
+          done
 
   build-windows:
     runs-on: windows-latest
@@ -74,5 +91,23 @@ jobs:
           for old in $(gh release view v1 --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep '\.exe$' || true); do
             if [ "$old" != "$NEW_ASSET" ]; then
               gh release delete-asset v1 "$old" --repo "$GITHUB_REPOSITORY" --yes
+            fi
+          done
+      - name: Archive this version privately, keep last 5
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.ARCHIVE_REPO_TOKEN }}
+          ARCHIVE_REPO: andreasserfilippi/clipbridge-builds
+        run: |
+          set -e
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="win-$VERSION"
+          gh release create "$TAG" dist/*.exe --repo "$ARCHIVE_REPO" --title "Windows $VERSION" --notes "Archived build. Not for distribution." \
+            || gh release upload "$TAG" dist/*.exe --repo "$ARCHIVE_REPO" --clobber
+          i=0
+          for t in $(gh release list --repo "$ARCHIVE_REPO" --json tagName,createdAt -q 'sort_by(.createdAt) | reverse | .[].tagName' | grep '^win-' || true); do
+            i=$((i + 1))
+            if [ "$i" -gt 5 ]; then
+              gh release delete "$t" --repo "$ARCHIVE_REPO" --yes --cleanup-tag
             fi
           done
