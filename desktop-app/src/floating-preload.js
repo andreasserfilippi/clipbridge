@@ -25,4 +25,10 @@ contextBridge.exposeInMainWorld('floatingNative', {
   // Always-reachable path to editing setup (backend URL, keys, etc.) or
   // starting over, without needing to find the tray icon.
   openSettings: () => ipcRenderer.send('floating-open-settings'),
+
+  // Opt-in: sends every new copy automatically while on, instead of
+  // needing a click each time. Never persists across restarts (always
+  // off on launch) — see main.js for why.
+  toggleAutoSend: () => ipcRenderer.send('floating-toggle-auto-send'),
+  onAutoSendStateChanged: (callback) => ipcRenderer.on('auto-send-state-changed', (event, enabled) => callback(enabled)),
 });

@@ -4,6 +4,7 @@ const collapsedEl = document.getElementById('collapsed');
 const expandedEl = document.getElementById('expanded');
 const panelHeader = document.querySelector('.panel-header');
 const miniSend = document.getElementById('mini-send');
+const autoToggle = document.getElementById('auto-toggle');
 const settingsBtn = document.getElementById('settings-btn');
 const collapseBtn = document.getElementById('collapse-btn');
 const panelHistory = document.getElementById('panel-history');
@@ -76,6 +77,16 @@ expandHandle.addEventListener('click', () => window.floatingNative.toggleExpand(
 collapseBtn.addEventListener('click', () => window.floatingNative.toggleExpand());
 miniSend.addEventListener('click', () => triggerSend(miniSend));
 settingsBtn.addEventListener('click', () => window.floatingNative.openSettings());
+autoToggle.addEventListener('click', () => window.floatingNative.toggleAutoSend());
+
+// Reflected in both places at once: the toggle button in the expanded
+// panel (where you'd actually turn it on) and the collapsed circle's
+// pulsing ring (so it stays a visible reminder even when the panel isn't
+// open — the whole point of it being hard to miss).
+window.floatingNative.onAutoSendStateChanged((enabled) => {
+  autoToggle.classList.toggle('active', enabled);
+  btn.classList.toggle('auto-active', enabled);
+});
 
 function triggerSend(el) {
   if (el.classList.contains('syncing')) return;

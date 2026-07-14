@@ -53,6 +53,17 @@
   #btn.syncing .spinner { display: block; }
   #btn.syncing svg { display: none; }
 
+  /* Persistent while auto-send is on — deliberately distinct from and
+     visible underneath the transient syncing/success/error states above,
+     so it stays a visible reminder even when collapsed, not just buried
+     in the expanded panel. Pulses rather than sitting static so it's hard
+     to stop noticing it's on. */
+  #btn.auto-active { animation: auto-pulse 1.6s ease-in-out infinite; }
+  @keyframes auto-pulse {
+    0%, 100% { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45), 0 0 0 0 rgba(255, 159, 10, 0.6); }
+    50% { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45), 0 0 0 5px rgba(255, 159, 10, 0); }
+  }
+
   /* A small, always-visible handle overlapping the circle's edge — the
      discoverable way to open history, instead of a hidden right-click. */
   #expand-handle {
@@ -137,6 +148,14 @@
   #settings-btn { background: var(--border); }
   #settings-btn:hover { background: #4a4a4c; }
   #settings-btn svg { width: 14px; height: 14px; }
+
+  #auto-toggle { background: var(--border); }
+  #auto-toggle:hover { background: #4a4a4c; }
+  #auto-toggle svg { width: 14px; height: 14px; }
+  /* Amber to match the collapsed circle's pulse — same color means the
+     same thing in both places. */
+  #auto-toggle.active { background: #ff9f0a; }
+  #auto-toggle.active svg { stroke: #000; }
 
   #panel-history {
     flex: 1;
@@ -249,6 +268,11 @@
       </button>
       <span class="panel-title">ClipBridge</span>
       <span id="panel-status-dot"></span>
+      <button id="auto-toggle" class="mini-btn" title="Auto-send: sends every new copy automatically while on. Off by default every launch — remember to turn it off when you're done.">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"></path>
+        </svg>
+      </button>
       <button id="settings-btn" class="mini-btn" title="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>

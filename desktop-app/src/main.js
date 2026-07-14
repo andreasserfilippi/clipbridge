@@ -1,5 +1,6 @@
-const { app, Tray, Menu, BrowserWindow, nativeImage, ipcMain, screen, dialog } = require('electron');
+const { app, Tray, Menu, BrowserWindow, nativeImage, ipcMain, screen, dialog, clipboard } = require('electron');
 const path = require('path');
+const crypto = require('crypto');
 const Store = require('electron-store');
 
 // electron-store's renderer/preload usage relies on an IPC listener that's
@@ -23,6 +24,130 @@ let collapsedPos = null;
 // Separate from collapsedPos so the circle and the expanded panel can each
 // be dragged to their own spot without fighting over one remembered place.
 let expandedPos = null;
+
+// ---------- Auto-send: opt-in clipboard watcher ----------
+// Deliberately NOT the default (see README on why this app is manual-only
+// normally) and deliberately not persisted across restarts, so it can't be
+// silently left on from a previous session and forgotten about — every
+// launch starts with this off regardless of how it was left.
+//
+// Runs entirely in the main process: Electron's main process has direct
+// clipboard access and (verified) native fetch, so this doesn't need the
+// hidden renderer window at all for the actual network work. That matters
+// for the queue below — capturing full content the instant a change is
+// seen, rather than re-reading "whatever's on the clipboard" later, is
+// what keeps a burst of rapid copies from losing whatever was in between
+// while a previous upload was still in flight.
+let autoSendEnabled = false;
+let autoSendPollTimer = null;
+let lastClipboardSignature = null;
+const autoSendQueue = [];
+let autoSendProcessing = false;
+const AUTO_SEND_POLL_MS = 80;
+
+function readClipboardForAutoSend() {
+  const formats = clipboard.availableFormats();
+  if (formats.some((f) => f.startsWith('image/'))) {
+    const img = clipboard.readImage();
+    if (img.isEmpty()) return null;
+    const buf = img.toPNG();
+    return { key: 'image:' + crypto.createHash('md5').update(buf).digest('hex'), type: 'image', buf };
+  }
+  const text = clipboard.readText();
+  if (!text) return null;
+  return { key: 'text:' + text, type: 'text', text };
+}
+
+function pollAutoSendClipboard() {
+  const item = readClipboardForAutoSend();
+  if (!item || item.key === lastClipboardSignature) return;
+  lastClipboardSignature = item.key;
+  autoSendQueue.push(item);
+  processAutoSendQueue();
+}
+
+async function processAutoSendQueue() {
+  if (autoSendProcessing) return;
+  autoSendProcessing = true;
+  try {
+    while (autoSendQueue.length > 0) {
+      const item = autoSendQueue.shift();
+      await sendAutoSendItem(item);
+    }
+  } finally {
+    autoSendProcessing = false;
+  }
+}
+
+function flashFloatingSyncResult(ok) {
+  if (floatingWindow && !floatingWindow.isDestroyed()) {
+    // Same channel the floating button's own click handler listens on —
+    // this makes both the collapsed circle and the expanded panel's send
+    // icon flash exactly like a manual click would, no separate UI code
+    // needed for auto-sent feedback.
+    floatingWindow.webContents.send('sync-result', { ok });
+  }
+}
+
+async function sendAutoSendItem(item) {
+  const baseUrl = store.get('baseUrl');
+  const apiKey = store.get('apiKey');
+  const blobToken = store.get('blobToken');
+  const deviceName = store.get('deviceName');
+  if (!baseUrl || !apiKey || !deviceName) return;
+
+  try {
+    let content = item.text;
+    if (item.type === 'image') {
+      const uploadRes = await fetch('https://blob.vercel-storage.com/clipboard-image.png', {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + blobToken },
+        body: item.buf,
+      });
+      if (!uploadRes.ok) throw new Error('Blob upload failed: HTTP ' + uploadRes.status);
+      const uploadData = await uploadRes.json();
+      content = uploadData.url;
+    }
+
+    const res = await fetch(baseUrl + '/api/clipboard', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, type: item.type, device: deviceName }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    flashFloatingSyncResult(true);
+    // The Pusher new-entry event this triggers gets skipped by the main
+    // window's own listener for entries from this same device (existing
+    // self-echo suppression), so the local history view needs its own
+    // nudge to pick up what was just sent.
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('request-history-refresh');
+    }
+  } catch (err) {
+    console.error('Auto-send failed:', err.message);
+    flashFloatingSyncResult(false);
+  }
+}
+
+function setAutoSend(enabled) {
+  autoSendEnabled = enabled;
+  if (enabled) {
+    // Baseline against whatever's on the clipboard right now so turning
+    // this on doesn't immediately send something copied before it was
+    // enabled — only genuinely new copies from this point on.
+    const item = readClipboardForAutoSend();
+    lastClipboardSignature = item ? item.key : null;
+    autoSendPollTimer = setInterval(pollAutoSendClipboard, AUTO_SEND_POLL_MS);
+  } else {
+    clearInterval(autoSendPollTimer);
+    autoSendPollTimer = null;
+    autoSendQueue.length = 0;
+  }
+  if (floatingWindow && !floatingWindow.isDestroyed()) {
+    floatingWindow.webContents.send('auto-send-state-changed', enabled);
+  }
+}
 
 function isConfigured() {
   return !!(store.get('baseUrl') && store.get('apiKey') && store.get('pusherKey') &&
@@ -264,6 +389,8 @@ ipcMain.on('sync-result-from-main-window', (event, result) => {
 });
 
 ipcMain.on('floating-toggle-expand', () => setExpanded(!isExpanded));
+
+ipcMain.on('floating-toggle-auto-send', () => setAutoSend(!autoSendEnabled));
 
 // The settings icon on the expanded panel — same destination as the tray's
 // "Settings…" item, just reachable without hunting for the tray icon.
