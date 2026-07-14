@@ -33,7 +33,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          NEW_ASSET=$(basename dist/*.dmg)
+          # GitHub replaces spaces with periods in the stored asset name on
+          # upload, regardless of the local filename -- comparing against
+          # the un-sanitized local name here previously caused the loop to
+          # treat the file it had JUST uploaded as "old" and delete it.
+          NEW_ASSET=$(basename dist/*.dmg | tr ' ' '.')
           gh release upload v1 dist/*.dmg --repo "$GITHUB_REPOSITORY" --clobber
           for old in $(gh release view v1 --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep '\.dmg$' || true); do
             if [ "$old" != "$NEW_ASSET" ]; then
@@ -59,7 +63,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          NEW_ASSET=$(basename dist/*.exe)
+          # electron-builder's default NSIS name has spaces ("ClipBridge
+          # Setup 1.0.3.exe"), but GitHub replaces spaces with periods in
+          # the stored asset name on upload -- comparing against the
+          # un-sanitized local name here previously caused the loop to
+          # treat the file it had JUST uploaded as "old" and delete it,
+          # leaving zero windows assets on the release.
+          NEW_ASSET=$(basename dist/*.exe | tr ' ' '.')
           gh release upload v1 dist/*.exe --repo "$GITHUB_REPOSITORY" --clobber
           for old in $(gh release view v1 --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | grep '\.exe$' || true); do
             if [ "$old" != "$NEW_ASSET" ]; then
