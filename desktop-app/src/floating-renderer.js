@@ -145,8 +145,26 @@ function renderPanelHistory() {
     meta.className = 'meta';
     meta.textContent = entry.device + ' · ' + timeAgo(entry.timestamp);
 
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'entry-delete';
+    deleteBtn.title = 'Delete everywhere';
+    deleteBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M3 6h18"></path><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>' +
+      '<path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>' +
+      '<path d="M10 11v6"></path><path d="M14 11v6"></path>' +
+      '</svg>';
+    // Stop propagation so this doesn't also trigger the entry's own click
+    // handler (copy to clipboard) — they'd otherwise both fire on the same tap.
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!confirm('Delete this entry everywhere? This removes it from every connected device, not just here.')) return;
+      window.floatingNative.deleteEntry(entry.id);
+    });
+
     div.appendChild(contentDiv);
     div.appendChild(meta);
+    div.appendChild(deleteBtn);
     div.addEventListener('click', () => window.floatingNative.copyEntry(entry));
     panelHistory.appendChild(div);
   }
@@ -156,4 +174,11 @@ window.floatingNative.onCopyResult((result) => {
   panelToast.textContent = result.ok ? 'Copied' : 'Copy failed';
   panelToast.classList.add('show');
   setTimeout(() => panelToast.classList.remove('show'), 1200);
+});
+
+window.floatingNative.onDeleteResult((result) => {
+  if (result.ok) return; // success has no separate feedback — the entry disappearing from the list is the feedback
+  panelToast.textContent = 'Delete failed: ' + result.error;
+  panelToast.classList.add('show');
+  setTimeout(() => panelToast.classList.remove('show'), 1800);
 });

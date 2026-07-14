@@ -13,6 +13,14 @@ contextBridge.exposeInMainWorld('floatingNative', {
   onHistoryUpdated: (callback) => ipcRenderer.on('history-updated', (event, entries) => callback(entries)),
   copyEntry: (entry) => ipcRenderer.send('floating-copy-entry', entry),
   onCopyResult: (callback) => ipcRenderer.on('copy-result', (event, result) => callback(result)),
+  // Deletes everywhere (Redis, Blob if it was an image, every other
+  // connected client via Pusher), not just from this list — the actual
+  // removal from view happens when the resulting history-updated event
+  // comes back, same as any other real-time change. This result is only
+  // for surfacing a failure; success has no separate feedback since
+  // watching the entry disappear from the list already is the feedback.
+  deleteEntry: (id) => ipcRenderer.send('floating-delete-entry', id),
+  onDeleteResult: (callback) => ipcRenderer.on('delete-result', (event, result) => callback(result)),
 
   // Always-reachable path to editing setup (backend URL, keys, etc.) or
   // starting over, without needing to find the tray icon.

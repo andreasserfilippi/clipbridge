@@ -153,6 +153,7 @@
   #panel-history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
   #panel-history::-webkit-scrollbar-thumb:hover { background: #4a4a4c; }
   .entry {
+    position: relative;
     background: #2c2c2e;
     border-radius: 10px;
     padding: 9px 10px;
@@ -171,6 +172,25 @@
   .entry img { max-width: 100%; max-height: 120px; border-radius: 6px; display: block; }
   .entry .meta { margin-top: 4px; font-size: 10.5px; color: var(--muted); }
   .empty { color: var(--muted); font-size: 12.5px; text-align: center; padding: 30px 14px; }
+
+  /* Only shown on hover so the list isn't cluttered by default — deletes
+     everywhere (Redis + Blob + every other connected client via Pusher),
+     not just locally, so it stays out of the way of an accidental tap. */
+  .entry-delete {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .entry:hover .entry-delete { display: flex; }
+  .entry-delete:hover { background: var(--danger); }
+  .entry-delete svg { width: 11px; height: 11px; pointer-events: none; }
 
   #panel-toast {
     position: absolute;

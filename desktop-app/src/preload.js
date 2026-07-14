@@ -43,6 +43,8 @@ contextBridge.exposeInMainWorld('native', {
   onRequestHistoryRefresh: (callback) => ipcRenderer.on('request-history-refresh', () => callback()),
   onCopyEntryTrigger: (callback) => ipcRenderer.on('trigger-copy-entry', (event, entry) => callback(entry)),
   reportCopyResult: (result) => ipcRenderer.send('copy-result-from-main-window', result),
+  onDeleteEntryTrigger: (callback) => ipcRenderer.on('trigger-delete-entry', (event, id) => callback(id)),
+  reportDeleteResult: (result) => ipcRenderer.send('delete-result-from-main-window', result),
 
   // Tray "Settings…" and the floating panel's settings button both reveal
   // this window then send this so it jumps straight to the editable form

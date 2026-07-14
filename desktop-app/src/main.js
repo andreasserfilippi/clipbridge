@@ -297,6 +297,18 @@ ipcMain.on('copy-result-from-main-window', (event, result) => {
   }
 });
 
+ipcMain.on('floating-delete-entry', (event, id) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('trigger-delete-entry', id);
+  }
+});
+
+ipcMain.on('delete-result-from-main-window', (event, result) => {
+  if (floatingWindow && !floatingWindow.isDestroyed()) {
+    floatingWindow.webContents.send('delete-result', result);
+  }
+});
+
 ipcMain.on('renderer-ready', () => {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide();
   // Only right after a fresh setup, never on a normal launch of an

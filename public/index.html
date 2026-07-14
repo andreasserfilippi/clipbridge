@@ -18,6 +18,7 @@
     --border: #e5e5ea;
     --success-bg: #e6f9ed;
     --success-text: #1a7f37;
+    --danger: #ff3b30;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -29,6 +30,7 @@
       --border: #2c2c2e;
       --success-bg: #0f2e1a;
       --success-text: #4fd671;
+      --danger: #ff453a;
     }
   }
   * { box-sizing: border-box; }
@@ -148,10 +150,11 @@
     gap: 8px;
   }
   li {
+    position: relative;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 12px 14px;
+    padding: 12px 40px 12px 14px;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
@@ -159,6 +162,22 @@
   li:active {
     opacity: 0.6;
   }
+  /* Always visible, not hover-only — this page is touch-first (installed
+     as a home-screen web app), so there's no hover state to reveal it on. */
+  .entry-delete {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .entry-delete:active { opacity: 0.6; }
+  .entry-delete svg { width: 14px; height: 14px; stroke: var(--danger); pointer-events: none; }
   .content {
     font-size: 15px;
     white-space: pre-wrap;
@@ -309,6 +328,23 @@
       }
     }
 
+    // Deletes everywhere at once (Redis, Blob if it was an image, every
+    // other connected device via Pusher) — not just from this page's view.
+    async function deleteEntry(entry) {
+      if (!confirm('Delete this entry everywhere? This removes it from every connected device, not just here.')) return;
+      try {
+        const res = await fetch('/api/clipboard/' + encodeURIComponent(entry.id), {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        showToast('Deleted');
+        load();
+      } catch (err) {
+        showToast('Delete failed');
+      }
+    }
+
     function render(entries) {
       if (entries.length === 0) {
         contentEl.innerHTML = '<div class="empty">No clipboard history yet.</div>';
@@ -329,8 +365,25 @@
         const meta = document.createElement('div');
         meta.className = 'meta';
         meta.textContent = entry.device + ' · ' + timeAgo(entry.timestamp);
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'entry-delete';
+        deleteBtn.setAttribute('aria-label', 'Delete');
+        deleteBtn.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M3 6h18"></path><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>' +
+          '<path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path>' +
+          '<path d="M10 11v6"></path><path d="M14 11v6"></path>' +
+          '</svg>';
+        // Stop propagation so this doesn't also trigger the li's own click
+        // handler (copy to clipboard) — they'd otherwise both fire on the same tap.
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteEntry(entry);
+        });
+
         li.appendChild(contentDiv);
         li.appendChild(meta);
+        li.appendChild(deleteBtn);
         li.addEventListener('click', () => copyEntry(entry));
         ul.appendChild(li);
       }

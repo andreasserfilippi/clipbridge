@@ -1,5 +1,6 @@
 const CHANNEL = 'clipbridge';
 const EVENT = 'new-clipboard-entry';
+const DELETE_EVENT = 'clipboard-entry-deleted';
 
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
@@ -264,6 +265,32 @@ async function postEntry(content, type) {
   return res.json();
 }
 
+async function deleteEntryRemote(id) {
+  const res = await fetch(config.baseUrl + '/api/clipboard/' + encodeURIComponent(id), {
+    method: 'DELETE',
+    headers: { 'x-api-key': config.apiKey },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'HTTP ' + res.status);
+  }
+  return res.json();
+}
+
+async function performDelete(id) {
+  try {
+    await deleteEntryRemote(id);
+    // No local list update here — the resulting clipboard-entry-deleted
+    // Pusher event (below, in connectPusher) is what actually removes it
+    // from every connected client's view, including this one, so there's
+    // only one code path responsible for that instead of two that could
+    // drift out of sync.
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
 async function performManualSync() {
   if (isSyncing) return { ok: false, error: 'Already sending' };
   isSyncing = true;
@@ -313,6 +340,11 @@ function connectPusher() {
     showToast('Received from ' + entry.device);
     refreshHistory();
   });
+
+  // Not skipped for our own echo like EVENT above — this is the single
+  // path that actually removes an entry from view (see performDelete),
+  // including on the device that requested the delete in the first place.
+  channel.bind(DELETE_EVENT, () => refreshHistory());
 }
 
 // ---------- Boot ----------
@@ -337,6 +369,10 @@ function startApp() {
   window.native.onCopyEntryTrigger(async (entry) => {
     const result = await copyEntryToClipboard(entry, false);
     window.native.reportCopyResult(result);
+  });
+  window.native.onDeleteEntryTrigger(async (id) => {
+    const result = await performDelete(id);
+    window.native.reportDeleteResult(result);
   });
 
   window.native.notifyReady();
